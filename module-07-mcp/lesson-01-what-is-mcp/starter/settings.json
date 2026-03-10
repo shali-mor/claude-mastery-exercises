@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "TODO-server-1": {
+      "type": "TODO (stdio or http)",
+      "command": "TODO",
+      "args": ["TODO"]
+    },
+    "TODO-server-2": {
+      "type": "TODO",
+      "url": "TODO"
+    }
+  }
+}

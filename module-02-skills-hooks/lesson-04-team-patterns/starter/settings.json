@@ -1,0 +1,22 @@
+{
+  "defaultMode": "TODO: set to acceptEdits",
+  "allowedTools": [
+    "TODO: add bash here"
+  ],
+  "blockedTools": [
+    "TODO: block WebFetch"
+  ],
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "TODO: log session start to ~/.claude-sessions.log"
+          }
+        ]
+      }
+    ]
+  }
+}

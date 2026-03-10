@@ -1,0 +1,19 @@
+{
+  "method": "TODO (GET or POST?)",
+  "url": "TODO (Anthropic API endpoint)",
+  "authentication": "TODO (headerAuth, genericCredentialType, etc.)",
+  "headers": {
+    "TODO-header-1": "TODO",
+    "TODO-header-2": "TODO"
+  },
+  "body": {
+    "model": "TODO",
+    "max_tokens": 0,
+    "messages": [
+      {
+        "role": "user",
+        "content": "TODO (n8n expression for previous node's text)"
+      }
+    ]
+  }
+}

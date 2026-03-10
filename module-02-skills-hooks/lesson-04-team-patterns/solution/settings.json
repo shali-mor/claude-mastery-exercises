@@ -1,0 +1,27 @@
+{
+  "defaultMode": "acceptEdits",
+  "allowedTools": [
+    "bash",
+    "read",
+    "edit",
+    "write",
+    "glob",
+    "grep"
+  ],
+  "blockedTools": [
+    "WebFetch"
+  ],
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"[$(date -u +%Y-%m-%dT%H:%M:%SZ)] Session started\" >> ~/.claude-sessions.log"
+          }
+        ]
+      }
+    ]
+  }
+}

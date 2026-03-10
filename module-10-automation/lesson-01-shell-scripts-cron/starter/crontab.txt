@@ -1,0 +1,7 @@
+# Claude Automation Crontab
+# Format: minute hour day month weekday command
+
+# TODO: Add 3 cron entries:
+# 1. Run daily-review.sh every weekday (Mon-Fri) at 7:00am
+# 2. Run weekly-changelog.sh every Monday at 8:00am
+# 3. Delete review files older than 30 days every Sunday at midnight

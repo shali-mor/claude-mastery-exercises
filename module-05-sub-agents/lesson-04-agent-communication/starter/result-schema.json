@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "type": "object",
+  "required": ["agent_id", "status", "findings", "summary"],
+  "properties": {
+    "agent_id": {
+      "TODO": "define the agent_id field - type string"
+    },
+    "status": {
+      "TODO": "define status as enum of success | error"
+    },
+    "findings": {
+      "TODO": "define findings as array of objects with severity, file, line, message, suggestion"
+    },
+    "summary": {
+      "TODO": "define summary as string"
+    },
+    "error": {
+      "TODO": "define error as string or null (nullable)"
+    }
+  }
+}

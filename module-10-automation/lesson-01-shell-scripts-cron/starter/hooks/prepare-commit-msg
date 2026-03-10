@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Git prepare-commit-msg hook
+# Suggests a commit message using Claude if none was provided
+
+COMMIT_MSG_FILE="$1"
+COMMIT_SOURCE="${2:-}"
+
+# Skip if commit source is merge, squash, or message (user explicitly provided)
+if [[ "$COMMIT_SOURCE" == "merge" || "$COMMIT_SOURCE" == "squash" || "$COMMIT_SOURCE" == "message" ]]; then
+  exit 0
+fi
+
+# TODO: Read the current commit message
+CURRENT_MSG=$(cat "$COMMIT_MSG_FILE" | grep -v "^#" | tr -d '\n')
+
+# TODO: If message is non-empty (user already wrote one), skip
+# if [[ -n "$CURRENT_MSG" ]]; then exit 0; fi
+
+# TODO: Get the staged diff
+DIFF=$(git diff --staged)
+
+if [[ -z "$DIFF" ]]; then
+  exit 0
+fi
+
+# TODO: Pipe the diff to claude -p with a prompt asking for a conventional commit message
+# Example: echo "$DIFF" | claude -p "Suggest a concise conventional commit message (format: type: description). Reply with only the message, no explanation."
+
+# TODO: Write the suggestion to the commit message file (prepend before existing content)
+# echo "$SUGGESTION" > "$COMMIT_MSG_FILE.tmp" && cat "$COMMIT_MSG_FILE" >> "$COMMIT_MSG_FILE.tmp" && mv "$COMMIT_MSG_FILE.tmp" "$COMMIT_MSG_FILE"
