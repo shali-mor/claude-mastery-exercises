@@ -1,0 +1,24 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "TODO: path to session-reminder.sh"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "TODO": "Add model-guard.sh hook here using the same structure as SessionStart"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "TODO": "Add file-change-log.sh hook here"
+      }
+    ]
+  }
+}

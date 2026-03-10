@@ -1,0 +1,24 @@
+# CLAUDE.md
+
+## Project Overview
+<!-- TODO: Write 1-2 sentences describing what this project does -->
+
+## Tech Stack
+<!-- TODO: List the languages, runtimes, and frameworks used -->
+- Runtime:
+- Language:
+- Dependencies:
+
+## Key Files
+<!-- TODO: List the important files and what each one does -->
+- `app.js`:
+- `utils.js`:
+
+## Conventions
+<!-- TODO: Add at least 2 coding conventions Claude should follow in this project -->
+1.
+2.
+
+## Commands
+<!-- TODO: Add the command to run this project -->
+- Run:
