@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "TODO: allow npm test",
+      "TODO: allow npm run lint",
+      "TODO: allow git add",
+      "TODO: allow git commit"
+    ],
+    "deny": [
+      "TODO: deny rm",
+      "TODO: deny git push",
+      "TODO: deny git reset"
+    ]
+  }
+}
