@@ -1,0 +1,289 @@
+{
+  "name": "Daily Stock Picks Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000001",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [200, 80]
+    },
+    {
+      "parameters": {
+        "updates": ["message"],
+        "additionalFields": {}
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000002",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [460, 80],
+      "webhookId": "stock-bot-telegram-trigger",
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_WITH_YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "passThrough",
+        "output": "input1"
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000003",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [330, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "const tickers = [\n  'AAPL', 'MSFT', 'NVDA', 'GOOGL', 'META',\n  'AMZN', 'TSLA', 'JPM',  'V',     'MA',\n  'UNH',  'LLY',  'XOM',  'CVX',   'HD',\n  'COST', 'AVGO', 'ASML', 'AMD',   'NFLX',\n];\nreturn tickers.map(ticker => ({ json: { ticker } }));"
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000004",
+      "name": "Set Watchlist",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [330, 460]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://query1.finance.yahoo.com/v8/finance/chart/{{ $json.ticker }}?interval=1d&range=90d",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000005",
+      "name": "Yahoo Finance",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [330, 660]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst ticker = item.meta?.symbol ?? 'UNKNOWN';\nconst closes = item.indicators?.quote?.[0]?.close ?? [];\nconst volumes = item.indicators?.quote?.[0]?.volume ?? [];\nif (closes.length < 50) return [{ json: { ticker, skip: true } }];\nfunction calcRSI(prices, period = 14) {\n  let gains = 0, losses = 0;\n  for (let i = 1; i <= period; i++) { const d = prices[i]-prices[i-1]; if(d>0) gains+=d; else losses-=d; }\n  let avgGain = gains/period, avgLoss = losses/period;\n  for (let i = period+1; i < prices.length; i++) { const d=prices[i]-prices[i-1]; avgGain=(avgGain*(period-1)+Math.max(d,0))/period; avgLoss=(avgLoss*(period-1)+Math.max(-d,0))/period; }\n  return avgLoss===0 ? 100 : 100-100/(1+avgGain/avgLoss);\n}\nfunction calcEMA(prices, period) { const k=2/(period+1); let ema=prices.slice(0,period).reduce((a,b)=>a+b,0)/period; for(let i=period;i<prices.length;i++) ema=prices[i]*k+ema*(1-k); return ema; }\nconst ema12=calcEMA(closes,12), ema26=calcEMA(closes,26), macdLine=ema12-ema26;\nconst macdSeries=closes.slice(-35).map((_,i,arr)=>{ const s=closes.slice(0,closes.length-arr.length+i+1); return calcEMA(s,12)-calcEMA(s,26); });\nconst signalLine=calcEMA(macdSeries,9);\nconst sma50=closes.slice(-50).reduce((a,b)=>a+b,0)/50;\nconst recentVol=volumes.slice(-5).reduce((a,b)=>a+(b??0),0)/5;\nconst avgVol20=volumes.slice(-20).reduce((a,b)=>a+(b??0),0)/20;\nconst volumeRatio=avgVol20>0?recentVol/avgVol20:1;\nconst price30dAgo=closes[closes.length-31]??closes[0];\nconst currentPrice=closes[closes.length-1];\nconst priceChange30d=((currentPrice-price30dAgo)/price30dAgo)*100;\nreturn [{ json: { ticker, currentPrice: Math.round(currentPrice*100)/100, rsi: Math.round(calcRSI(closes)*10)/10, macdLine: Math.round(macdLine*100)/100, macdCrossingUp: macdLine>signalLine&&macdLine>0, aboveSMA50: currentPrice>sma50, volumeRatio: Math.round(volumeRatio*100)/100, priceChange30d: Math.round(priceChange30d*10)/10 } }];"
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000006",
+      "name": "Compute Signals",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [330, 860]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "filter-cond-1",
+              "leftValue": "={{ $json.rsi }}",
+              "rightValue": 70,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            },
+            {
+              "id": "filter-cond-2",
+              "leftValue": "={{ $json.priceChange30d }}",
+              "rightValue": 20,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            },
+            {
+              "id": "filter-cond-3",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000007",
+      "name": "Filter",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [330, 1060]
+    },
+    {
+      "parameters": {
+        "jsCode": "const stocks = $input.all().map(i => i.json).filter(s => !s.skip);\nif (stocks.length === 0) return [{ json: { prompt: null, error: 'No stocks passed the filter.' } }];\nconst today = new Date().toISOString().split('T')[0];\nconst stockTable = stocks.map(s => `${s.ticker}: price=$${s.currentPrice} RSI=${s.rsi} MACD=${s.macdLine}(${s.macdCrossingUp?'crossing up':'flat'}) vs50SMA=${s.aboveSMA50?'above':'below'} volRatio=${s.volumeRatio}x 30d%=${s.priceChange30d}%`).join('\\n');\nconst prompt = `You are a swing trading analyst. The investor's strategy is to hold positions for 1–2 months, targeting 10–25% gains.\\n\\nToday: ${today}\\nScreening data for ${stocks.length} stocks:\\n${stockTable}\\n\\nScoring criteria:\\n- RSI between 40–65\\n- MACD crossing up\\n- Price above 50-day SMA\\n- Volume ratio > 1.2\\n- Not already up 20%+ in 30 days\\n\\nTask: Score each stock (0–5), select TOP 3.\\n\\nRespond ONLY in this exact JSON (no markdown):\\n{\"date\":\"${today}\",\"picks\":[{\"ticker\":\"AAPL\",\"score\":4,\"reason\":\"...\",\"risk\":\"...\"}],\"summary\":\"...\"}`;\nreturn [{ json: { prompt, stockCount: stocks.length } }];"
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000008",
+      "name": "Build Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [330, 1260]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-haiku-4-5-20251001\",\n  \"max_tokens\": 1024,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $json.prompt }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000009",
+      "name": "Claude API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [330, 1460],
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_YOUR_ANTHROPIC_CREDENTIAL_ID",
+          "name": "Anthropic"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.content?.[0]?.text ?? '';\nlet data;\ntry { const cleaned = raw.replace(/^```json\\s*/i,'').replace(/\\s*```$/,'').trim(); data = JSON.parse(cleaned); } catch(e) { return [{ json: { parseError: true, message: '❌ Could not parse Claude response. Check Executions.' } }]; }\nif (!data.picks || !Array.isArray(data.picks)) return [{ json: { parseError: true, message: '❌ Unexpected JSON shape.' } }];\nreturn [{ json: data }];"
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000010",
+      "name": "Parse Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [330, 1660]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nif (data.parseError) return [{ json: { message: data.message } }];\nconst medals = ['🥇','🥈','🥉'];\nconst lines = [`📈 <b>Swing Trade Picks — ${data.date}</b>\\n`,`<i>${data.summary}</i>\\n`];\ndata.picks.forEach((p,i) => { lines.push(`${medals[i]??'#'+(i+1)} <b>${p.ticker}</b> (score: ${p.score}/5)`,`💡 ${p.reason}`,`⚠️ Risk: ${p.risk}\\n`); });\nlines.push('<i>Not financial advice. Do your own research.</i>');\nreturn [{ json: { message: lines.join('\\n') } }];"
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000011",
+      "name": "Format Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [330, 1860]
+    },
+    {
+      "parameters": {
+        "chatId": "=YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000012",
+      "name": "Send Picks",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [330, 2060],
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_WITH_YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const errData = $input.first().json;\nconst errMsg = errData.error?.message ?? errData.message ?? JSON.stringify(errData).slice(0,200);\nreturn [{ json: { message: `❌ <b>Stock Bot Error</b>\\n\\nThe picks run failed at the Claude API step.\\n\\n<code>${errMsg}</code>\\n\\nCheck <b>n8n → Executions</b> for the full trace.` } }];"
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000013",
+      "name": "Error Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [620, 1520]
+    },
+    {
+      "parameters": {
+        "chatId": "=YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000014",
+      "name": "Send Error",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [620, 1720],
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_WITH_YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [[{ "node": "Merge", "type": "main", "index": 0 }]]
+    },
+    "Telegram Trigger": {
+      "main": [[{ "node": "Merge", "type": "main", "index": 1 }]]
+    },
+    "Merge": {
+      "main": [[{ "node": "Set Watchlist", "type": "main", "index": 0 }]]
+    },
+    "Set Watchlist": {
+      "main": [[{ "node": "Yahoo Finance", "type": "main", "index": 0 }]]
+    },
+    "Yahoo Finance": {
+      "main": [[{ "node": "Compute Signals", "type": "main", "index": 0 }]]
+    },
+    "Compute Signals": {
+      "main": [[{ "node": "Filter", "type": "main", "index": 0 }]]
+    },
+    "Filter": {
+      "main": [[{ "node": "Build Prompt", "type": "main", "index": 0 }]]
+    },
+    "Build Prompt": {
+      "main": [[{ "node": "Claude API", "type": "main", "index": 0 }]]
+    },
+    "Claude API": {
+      "main": [
+        [{ "node": "Parse Response", "type": "main", "index": 0 }],
+        [{ "node": "Error Message",  "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse Response": {
+      "main": [[{ "node": "Format Message", "type": "main", "index": 0 }]]
+    },
+    "Format Message": {
+      "main": [[{ "node": "Send Picks", "type": "main", "index": 0 }]]
+    },
+    "Error Message": {
+      "main": [[{ "node": "Send Error", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "stock-bot-workflow-v1"
+}
